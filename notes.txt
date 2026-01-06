@@ -1,0 +1,21 @@
+Just a notes tab of the process and all
+
+Backend:
+(Relating to the stock info method)
+
+    #Playing around with some commands 
+    #stock = ytrack.Ticker("AAPL")
+    #info = stock.info
+    #Sees what type of stock it is
+    #print(type(info))
+    #What inside the stock specifically
+    #print(type(info.keys()))
+
+    #Accessing the fields of the yFinance for more information on the stock
+    #month_data = stock.history(period="1y") #Sorts the stock by relevance performance of the past month
+    #print(stock.dividends)
+    #Format to view in the terminal
+
+    #Can also do multiple stocks at the same time
+    #multiStocks = ytrack.download(["GOOG", "MSFT", "TSLA"], interval="1d")
+    #print(multiStocks)

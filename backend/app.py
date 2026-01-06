@@ -36,25 +36,10 @@ def health_check():
 #This method is responsible for getting the stock information 
 #via the yFinance and add to the sturcture array of the user
 #With its goal being able to determine if its userful enough or not
+@app.route('/api/stock/<ticker>', methods= ['GET'])
 def proper_stock_info():
 
-    #Playing around with some commands 
-
-    #stock = ytrack.Ticker("AAPL")
-    #info = stock.info
-    #Sees what type of stock it is
-    #print(type(info))
-    #What inside the stock specifically
-    #print(type(info.keys()))
-
-    #Accessing the fields of the yFinance for more information on the stock
-    #month_data = stock.history(period="1y") #Sorts the stock by relevance performance of the past month
-    #print(stock.dividends)
-    #Format to view in the terminal
-
-    #Can also do multiple stocks at the same time
-    #multiStocks = ytrack.download(["GOOG", "MSFT", "TSLA"], interval="1d")
-    #print(multiStocks)
+    #First thing we got to do now is creating the endpoint so we can get the stock data
 
 if __name__ == "__main__":
     proper_stock_info()
