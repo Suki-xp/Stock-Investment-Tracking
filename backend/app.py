@@ -47,7 +47,7 @@ def proper_stock_info(ticker):
 
         #Need to check that the stock isnt empty and has a current price ready
         stock_price = stock_info.get('currentPrice') or stock_info.get('regularMarketPrice', 0)
-        if stock_price is 0:
+        if stock_price == 0:
             return None
         
         #Make sure stock is relevant enough to find all the info on
@@ -66,6 +66,32 @@ def proper_stock_info(ticker):
     except Exception as e:
         return {'error': str(e), 'ticker': ticker} #means the stock couldn't be located
 
+#This method is what connects that stock data to the app and will search based on
+#what stock the user is specifically looking for to bring up the data related to the stock
+@app.route('/api/stock/<ticker>', methods= ['GET'])
+def display_stock_info(ticker):
+    #It needs to call the stock info first and then check it through 
+    #to see if the stock data can be retrieved
+    try:
+        ticker = ticker.upper()
+        stock_result = proper_stock_info(ticker)
+        #Check to make sure that the stock_result can actually exist before updating the JSON
+        #to match that
+
+        if stock_result is not None:
+            #If its vaild data then we just return the stock 
+            return jsonify(stock_result), 200
+        
+        else:
+            response = {
+            "symbol": 'active',
+            "data": 'trackable',
+            "ticker": ticker
+            }
+            return jsonify(response), 400
+        
+    except Exception as e:
+     return jsonify({'error': str(e), 'ticker': ticker}), 500 #means the stock couldn't be located
+
 if __name__ == "__main__":
-    proper_stock_info()
-    #app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=True)
