@@ -12,7 +12,7 @@ CORS(app)
 
 #This will act as the temp memory that stores the users input data to track
 userPortfolios = {}
-userTranscations = []
+userTransacations = []
 
 #Need to verify that the health of the API is well
 @app.route('/api/health', methods = ['GET'])
@@ -73,8 +73,7 @@ def display_stock_info(ticker):
     #It needs to call the stock info first and then check it through 
     #to see if the stock data can be retrieved
     try:
-        ticker = ticker.upper()
-        stock_result = proper_stock_info(ticker)
+        stock_result = proper_stock_info(ticker.upper())
         #Check to make sure that the stock_result can actually exist before updating the JSON
         #to match that
 
@@ -92,6 +91,73 @@ def display_stock_info(ticker):
         
     except Exception as e:
      return jsonify({'error': str(e), 'ticker': ticker}), 500 #means the stock couldn't be located
+
+#Next we need to add a method that allows the users to create a portfoilio structure of all 
+#stocks that they are currently tracking
+@app.route('/api/portfolio/<portfolio_id>/transaction', methods=['POST'])
+def adding_transactions(portfolio_id):
+    try:
+        #We got get the data from a JSON request first
+        stock_data = request.json
+
+        #Then we need to check to make sure that the 
+        #json data of the stocks matches the parameters
+        error_response = {
+            "data": 'untrackable',
+            "error": 'missing key stock information or error in stock formatting'
+        }
+
+        #All the different conditions to check
+        if 'ticker' not in stock_data:
+            return jsonify(error_response), 400
+    
+        if 'shares' not in stock_data:
+            return jsonify(error_response), 400
+    
+        if 'purchase_date' not in stock_data:
+            return jsonify(error_response), 400
+    
+        if 'purchase_price' not in stock_data:
+            return jsonify(error_response), 400
+    
+        #Now that the boundaries are checked we need to vaildate the data types and values 
+        shares = float(stock_data.get('shares'))
+        if (shares <= 0):
+            return jsonify({"Stock Shares need to be positive"}), 400
+    
+        prices = float(stock_data.get('purchase_price'))
+        if (prices <= 0):
+            return jsonify({"Stock Prices need to be positive"}), 400
+        
+        #Aftewards we can add to a transcation dictionary that will then be 
+        #appended to the userTransactions list 
+        total_transactions = {
+            'portfolio_id': portfolio_id,
+            'id': len(portfolio_id) + 1, 
+            'ticker': stock_data.get('ticker').upper(), #Gets the stock information itself(name)
+            'shares': shares, 
+            'purchase_date': stock_data.get('purchase_date', "Unknown"),
+            'purchase_price': prices, 
+            'time_stamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        }   
+        #Then we append that data to the userTransactions list
+        #and return the success
+        userTransacations.append(total_transactions)
+        return jsonify({"message": "All the transactions were adeded"}), 201
+    
+    #Catching the two exceptions that could occur
+    except ValueError as a:
+         return jsonify({'Invaild data type due to error': str(a) }), 400
+    
+    except Exception as e:
+        return jsonify({'Couldnt add to userTransactions due to error': str(e)}), 500
+
+#This method gets the added transactions to return the filtered list of the data
+@app.route('/api/portfolio/<portfolio_id>/transactions', methods=['GET'])
+def getting_transactions(portfolio_id):
+
+    #Need to filter the userTransactions data via its portfolio_id tags
+    #we do this by using list comprehension
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
