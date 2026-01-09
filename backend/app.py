@@ -12,7 +12,7 @@ CORS(app)
 
 #This will act as the temp memory that stores the users input data to track
 userPortfolios = {}
-userTransacations = []
+userTransactions = []
 
 #Need to verify that the health of the API is well
 @app.route('/api/health', methods = ['GET'])
@@ -142,8 +142,8 @@ def adding_transactions(portfolio_id):
         }   
         #Then we append that data to the userTransactions list
         #and return the success
-        userTransacations.append(total_transactions)
-        return jsonify({"message": "All the transactions were adeded"}), 201
+        userTransactions.append(total_transactions)
+        return jsonify({"message": "Transactions have been updated"}), 201
     
     #Catching the two exceptions that could occur
     except ValueError as a:
@@ -158,6 +158,18 @@ def getting_transactions(portfolio_id):
 
     #Need to filter the userTransactions data via its portfolio_id tags
     #we do this by using list comprehension
+    try:
+        portfolio_transactions = [transaction for transaction in userTransactions if transaction['portfolio_id'] == portfolio_id]
+        #Then we can return the filitered list into a json format now 
+        view_transactions = {
+            "transactions": portfolio_transactions,
+            "count": len(portfolio_transactions),
+            "portfolio_id": portfolio_id
+        }
+        return jsonify(view_transactions), 200
+    
+    except Exception as noT:
+        return jsonify({'Couldnt extract transaction information due to error': str(noT)}), 500
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
