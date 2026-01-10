@@ -171,5 +171,108 @@ def getting_transactions(portfolio_id):
     except Exception as noT:
         return jsonify({'Couldnt extract transaction information due to error': str(noT)}), 500
 
+#Want to calculate the value of all the stocks in the portfolio value
+#via all the transactions
+def calculating_portfolio_value(total_transactions):
+    #We need to first sort all the transactions via the ticker amount 
+    #by sorting through the all the holdings within the transactions list
+
+    total_holdings = {}
+    for transaction in total_transactions:
+        #Then we need to accumlate the same shares and costs respectively 
+        #into each of the stocks
+        named_stocks = transaction['ticker']
+
+        if named_stocks not in total_holdings:
+            total_holdings[named_stocks] = {'shares': 0, 'total_cost': 0}
+            #Then we increment the proper amount tied to ticker name, calculate
+            #the average cost of the share and total costs
+        total_holdings[named_stocks]['shares'] += transaction['shares']
+        total_holdings[named_stocks]['total_cost'] += transaction['shares'] * transaction['purchase_price']
+    
+    #Then once that is all accumlated we need to create a dictionary that can store all the metric data 
+    #we do this by storing the position of the data itself
+    position_data = []
+    total_value = 0
+    total_cost = 0
+
+    #Fetching the current price of this ticker, and calculating the metrics for this position
+    #that we can add to the list 
+    for ticker, data in total_holdings.items():
+        #Extracting the data 
+        shares = data['shares']
+        costs = data['total_cost']
+
+        #Find the current price from earlier example format
+        try:
+            locate_stock = yStock.Ticker(ticker)
+            locate_price = locate_stock.info.get('currentPrice') or locate_stock.info.get('regularMarketPrice', 0)
+
+            if locate_price == 0:
+                locate_price = 0
+            
+        except Exception as e:
+            locate_price = 0
+        
+        #Now we got use the formuala to calculate the rest of the information
+        if shares > 0:
+            avg_cost = costs / shares
+        else:
+            avg_cost = 0
+
+        current_value = shares * locate_price
+        #Make sure we also find the absolute gain/loss of each of the stocks 
+
+        gain_loss = current_value - costs
+        if costs > 0:
+            gain_loss_percent = (gain_loss / costs) * 100
+        else:
+            gain_loss_percent = 0
+
+        #Now we can build a dictionary to store the positions which we 
+        #can then loop through and check to see how much the stock weights
+        #in its factor
+        calculated_stock_positions = {
+            'ticker': ticker, 
+            'shares': shares,
+            'avg_cost': avg_cost,
+            'cost_amount': costs, 
+            'current_price': locate_price, 
+            'current_value': current_value, 
+            'gain_loss': gain_loss, 
+            'gain_loss_percent': gain_loss_percent,
+            'weight': 0 #This is what we calculate to loop through
+        }
+        position_data.append(calculated_stock_positions)
+        #Updates the storage amount and values of the data
+        total_value += current_value
+        total_cost += costs
+
+    #Then we do the final loop through to check and add the proper weight value
+    for position in position_data:
+        if total_value > 0:
+            position['weight'] = (position['current_value'] / total_value) * 100
+        else:
+            position['weight'] = 0
+    
+    #Update the portfilo metrics again
+    total_returns = total_value - total_cost
+    total_returns_percent = 0
+
+    if total_cost > 0:
+        total_returns_percent = (total_returns / total_cost) * 100
+    else:
+        total_returns_percent
+    
+    #Finally returning the full summary of it all
+    return {
+        'total_value': total_value,
+        'total_cost': total_cost,
+        'total_return': total_returns,
+        'total_return_percent': total_returns_percent,
+        'num_positions': len(position_data),
+        'positions': position_data
+    }
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
