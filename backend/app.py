@@ -274,5 +274,23 @@ def calculating_portfolio_value(total_transactions):
         'positions': position_data
     }
 
+#Creating the function that get that calculation as a summary to display 
+@app.route('/api/portfolio/<portfolio_id>/summary', methods=['GET'])
+def get_portfolio_summary(portfolio_id):
+    #First we want to filter the transactions based on the users portfolio id
+    #same idea as before
+    try:
+        portfolio_calculations = [transaction for transaction in userTransactions if transaction['portfolio_id'] == portfolio_id]
+        #Then check that any of them are empty
+        if len(portfolio_calculations) == 0:
+            return jsonify({'Result': "No summary created as data couldn't be located", }), 200
+        
+        summary = calculating_portfolio_value(portfolio_calculations)
+        return jsonify(summary), 200
+    
+    #Catching the last place as always
+    except Exception as noSummary:
+        return jsonify({'Couldnt extract transaction information due to error': str(noSummary)}), 500
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
