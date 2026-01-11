@@ -37,6 +37,7 @@ def health_check():
 #via the yFinance and add to the sturcture array of the user
 #With its goal being able to determine if its userful enough or not
 def proper_stock_info(ticker):
+
     #Working with the try and except format to retrieve the data
     #this makes it that onces the user visits the /api/stock/"" that 
     #will try and retrieve that stock info
@@ -70,6 +71,7 @@ def proper_stock_info(ticker):
 #what stock the user is specifically looking for to bring up the data related to the stock
 @app.route('/api/stock/<ticker>', methods= ['GET'])
 def display_stock_info(ticker):
+
     #It needs to call the stock info first and then check it through 
     #to see if the stock data can be retrieved
     try:
@@ -174,10 +176,11 @@ def getting_transactions(portfolio_id):
 #Want to calculate the value of all the stocks in the portfolio value
 #via all the transactions
 def calculating_portfolio_value(total_transactions):
+
     #We need to first sort all the transactions via the ticker amount 
     #by sorting through the all the holdings within the transactions list
-
     total_holdings = {}
+
     for transaction in total_transactions:
         #Then we need to accumlate the same shares and costs respectively 
         #into each of the stocks
@@ -277,6 +280,7 @@ def calculating_portfolio_value(total_transactions):
 #Creating the function that get that calculation as a summary to display 
 @app.route('/api/portfolio/<portfolio_id>/summary', methods=['GET'])
 def get_portfolio_summary(portfolio_id):
+
     #First we want to filter the transactions based on the users portfolio id
     #same idea as before
     try:
@@ -393,6 +397,88 @@ def getting_real_time_portfolio_data(portfolio_id):
     except Exception as noSummary:
         return jsonify({'Couldnt extract transaction information due to error': str(noSummary)}), 500
     
+#This method is responsible for allowing the user to see the classification of their stocks 
+#based on the different sectors they reside in, i.e (technological, medicial, business, etc)
+def stock_sectors(transactions_list):
+
+    #First we need to filitering out and classify what each of the stock 
+    #is based on the sector it has (we can call a previous method of calculate for that)
+    portfolio_data = calculating_portfolio_value(transactions_list)
+    positions = portfolio_data['positions']
+    total_value = portfolio_data['total_value']
+    #Then we copy the similar structure of loop through the 
+    #the totals per each of the sectors 
+    for sector_position in positions:
+            
+        #We can use the previous call to get that information and begin loop
+        #through to filter and classify them
+        ticker = sector_position['ticker']
+
+        #Getting the sectors information
+        try:
+            stock = yStock.Ticker(ticker)
+            sector = stock.info.get('sector', 'Unknown')
+            sector_position['sector'] = sector  #Add sector to position
+
+        except:
+            sector_position['sector'] = 'Unknown'
+        
+    #Then once filiterd they need to be grouped by each of the sectors
+    grouped_sectors = {}
+
+    for sector_positions in positions:
+
+        #Set the assignment of the sector within
+        sector = sector_positions['sector']  
+        value = sector_positions['current_value'] 
+
+        #Check if it can be added as a value (NOT THE WHOLE SECTOR)
+        if sector not in grouped_sectors:
+            grouped_sectors[sector] = 0
+        grouped_sectors[sector] += value
+        
+    #After that addition we can calculate the remaning percentage of 
+    #what each sector represents 
+    by_sector = []
+    
+    for sector, value in grouped_sectors.items():
+
+        if total_value > 0: 
+            percent = (value / total_value * 100) 
+        else:
+            percent = 0
+
+        #Parse within proper format
+        by_sector.append({
+            'name': sector,
+            'value': value,
+            'percent': percent
+        })
+
+    return {
+    'by_sector': by_sector #Returns the formatted by sector along with value and percent amount
+    }
+
+#Same sort of idea as all the rest, call it within the app function
+@app.route('/api/portfolio/<portfolio_id>/allocation', methods=['GET'])
+def getting_stock_sectors(portfolio_id):
+
+    #Filter out like usual 
+    try:
+        date_range_portfolio = [transaction for transaction in userTransactions if transaction['portfolio_id'] == portfolio_id]
+        #Then check that any of them are empty
+        if len(date_range_portfolio) == 0:
+            
+            return jsonify({'name': "NA", 
+                            'vlaue': 0,
+                            'percent': 0}), 200
+        
+        summary = stock_sectors(date_range_portfolio)
+        return jsonify(summary), 200
+    
+    #Catching the last place as always
+    except Exception as noSummary:
+        return jsonify({'Couldnt extract transaction information due to error': str(noSummary)}), 500
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
