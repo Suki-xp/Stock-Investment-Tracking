@@ -2,7 +2,7 @@
 #graphing plotting/tracking etc
 from flask import Flask, request, jsonify 
 from flask_cors import CORS
-from datetime import datetime
+from datetime import datetime, timedelta
 import yfinance as yStock
 import pandas as pd
 
@@ -371,6 +371,28 @@ def calculating_real_time_portfolio_data(transactions_lists, start_date, end_dat
         'dates': dates_list,
         'values': values_list
     }
+
+#The method to run the app for getting the date ranges
+@app.route('/api/portfolio/<portfolio_id>/performance', methods=['GET'])
+def getting_real_time_portfolio_data(portfolio_id):
+
+    #Need to get the queries for the ranges(the start and end dates)
+    end_date = request.args.get('end_date', datetime.now().strftime('%Y-%m-%d'))
+    start_date = request.args.get('start_date', (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d'))
+
+    try:
+        date_range_portfolio = [transaction for transaction in userTransactions if transaction['portfolio_id'] == portfolio_id]
+        #Then check that any of them are empty
+        if len(date_range_portfolio) == 0:
+            return jsonify({'Result': "No summary created as data couldn't be located", }), 200
+        
+        summary = calculating_real_time_portfolio_data(date_range_portfolio, start_date, end_date)
+        return jsonify(summary), 200
+    
+    #Catching the last place as always
+    except Exception as noSummary:
+        return jsonify({'Couldnt extract transaction information due to error': str(noSummary)}), 500
+    
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
