@@ -292,5 +292,85 @@ def get_portfolio_summary(portfolio_id):
     except Exception as noSummary:
         return jsonify({'Couldnt extract transaction information due to error': str(noSummary)}), 500
 
+#Calculating the performance of the portfolio now, but for the daily measurements
+#meaning that we need to deal with the real time data series of the stock data rather than all
+#all the collective data
+def calculating_real_time_portfolio_data(transactions_lists, start_date, end_date):
+    
+    #Set our data range and stock tickers
+    data_range = pd.date_range(start=start_date, end=end_date, freq='D') #For daily occurance tracking
+    stock_tickers = set([t['ticker'] for t in transactions_lists]) #Creates the unique range of symbols for the transactions
+
+    #Once we have all that data we then need to fetch all the prices within the date range
+    price_data = {}
+    for ticker in stock_tickers:
+        stocks = yStock.Ticker(ticker)
+        stock_range = stocks.history(start=start_date, end=end_date)
+
+        #One last check to make sure
+        if not stock_range.empty:
+            stock_range.index = stock_range.index.tz_localize(None)
+
+        #Adding to the dictionary for the range
+        price_data[ticker] = stock_range
+    
+    #Then for each date we got to calculate the value
+    dates_list = []
+    values_list = []
+
+    #We do that through the filtering of the transactions up to the dates, etc
+    for current_date in data_range: 
+
+        transaction_range = [t for t in transactions_lists 
+            if datetime.strptime(t['purchase_date'], '%Y-%m-%d') <= current_date
+        ]
+
+        #Once we have the proper range we can then sort by the ticker like in calculating 
+        #portfolio method 
+        daily_holdings = {}
+        for holdings in transaction_range:
+            tickers = holdings['ticker']
+
+            if tickers not in daily_holdings:
+                daily_holdings[tickers] = {'shares': 0, 'total_cost': 0}
+            
+            daily_holdings[tickers]['shares'] += holdings['shares']
+            daily_holdings[tickers]['total_cost'] += holdings['shares'] * holdings['purchase_price']
+
+        #Then we can calculate the total value of the stocks across that range
+        total_value_of_stocks = 0
+        for ticker, data in daily_holdings.items():
+            #We do that by finding the date tied to it
+            data_shares = data['shares']
+            try:
+                #Convert current_date to just the date part for lookup
+                date_key = current_date.date()
+
+                #Then we see if it falls within the range and formats the data contained
+                #from the start to that end portion
+                if date_key in price_data[ticker].index.date:
+
+                    price = price_data[ticker].loc[current_date]['Close']
+                    total_value_of_stocks += data_shares * price
+                else:
+                    available_dates = price_data[ticker].index[price_data[ticker].index <= current_date]
+
+                    if len(available_dates) > 0:
+                        last_date = available_dates[-1]
+                        price = price_data[ticker].loc[last_date]['Close']
+                        total_value_of_stocks += data_shares * price
+
+            except Exception as e:
+                pass #We just need to skip in this case
+
+        #Then we store the data values to return
+        dates_list.append(current_date.strftime('%Y-%m-%d'))
+        values_list.append(total_value_of_stocks)
+
+    return {
+        'dates': dates_list,
+        'values': values_list
+    }
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
