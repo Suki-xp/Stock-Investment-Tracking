@@ -46,6 +46,13 @@ def proper_stock_info(ticker):
         find_stock = yStock.Ticker(ticker)
         stock_info = find_stock.info #Grabs relavent info about the stock
 
+        #Need to get multiple field references to display
+        stock_price = (stock_info.get('currentPrice') or 
+                      stock_info.get('regularMarketPrice') or 
+                      stock_info.get('previousClose') or 
+                      stock_info.get('ask') or 
+                      stock_info.get('bid') or 0)
+
         #Need to check that the stock isnt empty and has a current price ready
         stock_price = stock_info.get('currentPrice') or stock_info.get('regularMarketPrice', 0)
         if stock_price == 0:
@@ -209,7 +216,14 @@ def calculating_portfolio_value(total_transactions):
         #Find the current price from earlier example format
         try:
             locate_stock = yStock.Ticker(ticker)
-            locate_price = locate_stock.info.get('currentPrice') or locate_stock.info.get('regularMarketPrice', 0)
+            stock_info = locate_stock.info.get('currentPrice') or locate_stock.info.get('regularMarketPrice', 0)
+
+            #Again trying to get multiple sources for the data
+            locate_price = (stock_info.get('currentPrice') or 
+                       stock_info.get('regularMarketPrice') or 
+                       stock_info.get('previousClose') or 
+                       stock_info.get('ask') or 
+                       stock_info.get('bid') or 0)
 
             if locate_price == 0:
                 locate_price = 0
